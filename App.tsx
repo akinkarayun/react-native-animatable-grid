@@ -9,13 +9,20 @@
  */
 
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Dimensions, StyleSheet, Text, View} from 'react-native';
 import {FlatGrid} from 'react-native-super-grid';
 import {createStackNavigator} from '@react-navigation/stack';
 import {NavigationContainer} from '@react-navigation/native';
 import {TouchableOpacity} from 'react-native-gesture-handler';
 import * as Animatable from 'react-native-animatable';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import Animated, {
+  Extrapolate,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 
 const Stack = createStackNavigator();
 
@@ -25,6 +32,7 @@ const RootStack = () => {
       <Stack.Screen name="Home" component={Home} />
       <Stack.Screen name="Animatable" component={AnimatedScreen} />
       <Stack.Screen name="Details" component={Details} />
+      <Stack.Screen name="IntepolateScreen" component={IntepolateScreen} />
     </Stack.Navigator>
   );
 };
@@ -35,6 +43,7 @@ type RootStackParamList = {
   Details: {
     params: {name: string; color: string; code: string};
   };
+  IntepolateScreen: any;
 };
 
 type Props = NativeStackScreenProps<RootStackParamList>;
@@ -118,7 +127,7 @@ const AnimatedScreen = ({navigation}: Props) => {
   );
 };
 
-const Details = ({route}: Props) => {
+const Details = ({route, navigation}: Props) => {
   const {color, name, code} = route.params;
   return (
     <View
@@ -131,9 +140,123 @@ const Details = ({route}: Props) => {
       }}>
       <Text style={styles.itemName}>{name}</Text>
       <Text style={styles.itemCode}>{code}</Text>
+      <TouchableOpacity
+        style={{
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#ecd637',
+          padding: 20,
+          borderRadius: 10,
+        }}
+        onPress={() => navigation.navigate('IntepolateScreen')}>
+        <Text>Go to IntepolateScreen</Text>
+      </TouchableOpacity>
     </View>
   );
 };
+
+const text = ['Hello', 'Linked In', 'How', 'You All', 'Doing?'];
+
+const IntepolateScreen = ({navigation}: Props) => {
+  const translateX = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler(event => {
+    translateX.value = event.contentOffset.x;
+  });
+  return (
+    <Animated.ScrollView
+      horizontal
+      // pagingEnabled
+      onScroll={scrollHandler}
+      pagingEnabled
+      scrollEventThrottle={16}
+      showsHorizontalScrollIndicator={false}>
+      {text.map((item, index) => {
+        return (
+          <Page
+            translateX={translateX}
+            key={index.toString()}
+            title={item}
+            index={index}
+          />
+        );
+      })}
+    </Animated.ScrollView>
+  );
+};
+
+interface IPageProps {
+  title: string;
+  index: number;
+  translateX: Animated.SharedValue<number>;
+}
+
+const {height, width} = Dimensions.get('window');
+
+const Page = ({title, translateX, index}: IPageProps) => {
+  const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+  const rStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      translateX.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [0, 1, 0],
+      Extrapolate.CLAMP,
+    );
+
+    const borderRadious = interpolate(
+      translateX.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [0, width / 2, 0],
+      Extrapolate.CLAMP,
+    );
+
+    return {
+      borderRadius: borderRadious,
+      transform: [
+        {
+          scale,
+        },
+      ],
+    };
+  });
+
+  const rStyleText = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      translateX.value,
+      inputRange,
+      [height / 2, 0, -height / 2],
+      Extrapolate.CLAMP,
+    );
+
+    const opacity = interpolate(
+      translateX.value,
+      inputRange,
+      [-2, 1, -2],
+      Extrapolate.CLAMP,
+    );
+
+    return {
+      opacity,
+      transform: [
+        {
+          translateY,
+        },
+      ],
+    };
+  });
+  return (
+    <View
+      style={[
+        styles.pageContainer,
+        {backgroundColor: `rgba(0,0,256,0.${index + 2})`},
+      ]}>
+      <Animated.View style={[styles.square, rStyle]} />
+      <Animated.View style={[{position: 'absolute'}, rStyleText]}>
+        <Text style={styles.text}>{title}</Text>
+      </Animated.View>
+    </View>
+  );
+};
+
 const App = () => {
   return (
     <NavigationContainer>
@@ -142,6 +265,23 @@ const App = () => {
   );
 };
 const styles = StyleSheet.create({
+  pageContainer: {
+    width,
+    height,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  square: {
+    height: width * 0.7,
+    width: width * 0.7,
+    backgroundColor: 'rgba(0,0,256,0.4)',
+  },
+  text: {
+    fontSize: 70,
+    textTransform: 'uppercase',
+    color: 'white',
+    fontWeight: 'bold',
+  },
   gridView: {
     marginTop: 10,
     flex: 1,
