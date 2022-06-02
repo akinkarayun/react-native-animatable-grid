@@ -15,6 +15,7 @@ import {createStackNavigator} from '@react-navigation/stack';
 import {NavigationContainer} from '@react-navigation/native';
 import {TouchableOpacity} from 'react-native-gesture-handler';
 import * as Animatable from 'react-native-animatable';
+import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 const Stack = createStackNavigator();
 
@@ -22,12 +23,23 @@ const RootStack = () => {
   return (
     <Stack.Navigator>
       <Stack.Screen name="Home" component={Home} />
-      <Stack.Screen name="Notifications" component={AnimatedScreen} />
+      <Stack.Screen name="Animatable" component={AnimatedScreen} />
+      <Stack.Screen name="Details" component={Details} />
     </Stack.Navigator>
   );
 };
 
-const Home = ({navigation}: any) => {
+type RootStackParamList = {
+  Home: any;
+  Animatable: any;
+  Details: {
+    params: {name: string; color: string; code: string};
+  };
+};
+
+type Props = NativeStackScreenProps<RootStackParamList>;
+
+const Home = ({navigation}: Props) => {
   return (
     <View
       style={{
@@ -45,14 +57,14 @@ const Home = ({navigation}: any) => {
           padding: 20,
           borderRadius: 10,
         }}
-        onPress={() => navigation.navigate('Notifications')}>
+        onPress={() => navigation.navigate('Animatable')}>
         <Text>Go to AnimatedScreen</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-const AnimatedScreen = () => {
+const AnimatedScreen = ({navigation}: Props) => {
   const [items, setItems] = React.useState([
     {name: 'TURQUOISE', code: '#1abc9c'},
     {name: 'EMERALD', code: '#2ecc71'},
@@ -75,6 +87,7 @@ const AnimatedScreen = () => {
     {name: 'SILVER', code: '#bdc3c7'},
     {name: 'ASBESTOS', code: '#7f8c8d'},
   ]);
+
   return (
     <FlatGrid
       itemDimension={130}
@@ -82,16 +95,43 @@ const AnimatedScreen = () => {
       style={styles.gridView}
       spacing={10}
       renderItem={({item, index}) => (
-        <Animatable.View
-          animation="fadeInUp"
-          duration={300}
-          delay={index * 100}
-          style={[styles.itemContainer, {backgroundColor: item.code}]}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemCode}>{item.code}</Text>
-        </Animatable.View>
+        <TouchableOpacity
+          key={index}
+          onPress={() =>
+            navigation.navigate('Details', {
+              color: item.code,
+              name: item.name,
+              code: item.code,
+            })
+          }>
+          <Animatable.View
+            animation="fadeInUp"
+            duration={200}
+            delay={index * 300}
+            style={[styles.itemContainer, {backgroundColor: item.code}]}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemCode}>{item.code}</Text>
+          </Animatable.View>
+        </TouchableOpacity>
       )}
     />
+  );
+};
+
+const Details = ({route}: Props) => {
+  const {color, name, code} = route.params;
+  return (
+    <View
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: color,
+      }}>
+      <Text style={styles.itemName}>{name}</Text>
+      <Text style={styles.itemCode}>{code}</Text>
+    </View>
   );
 };
 const App = () => {
